@@ -1,9 +1,9 @@
+using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Mvc;
 using Cinefin.ServerPlugin.Configuration;
 using Cinefin.ServerPlugin.Services;
-using MediaBrowser.Controller.Library;
-using MediaBrowser.Model.Entities;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 
 namespace Cinefin.ServerPlugin.Controllers
@@ -15,110 +15,96 @@ namespace Cinefin.ServerPlugin.Controllers
         private readonly SonarrService _sonarrService;
         private readonly RadarrService _radarrService;
         private readonly OverseerrService _overseerrService;
-        private readonly ILibraryManager _libraryManager;
         private readonly ILogger<CinefinController> _logger;
 
         public CinefinController(
             SonarrService sonarrService,
             RadarrService radarrService,
             OverseerrService overseerrService,
-            ILibraryManager libraryManager,
             ILogger<CinefinController> logger)
         {
             _sonarrService = sonarrService;
             _radarrService = radarrService;
             _overseerrService = overseerrService;
-            _libraryManager = libraryManager;
             _logger = logger;
         }
 
         [HttpGet("Info")]
         public IActionResult GetInfo()
         {
+            var config = Plugin.Instance.Configuration;
             return Ok(new
             {
-                Version = "1.0.0",
-                Capabilities = new[] { "Overseerr", "Sonarr", "Radarr" },
-                IsConfigured = IsPluginConfigured()
+                version = Plugin.Instance.Version.ToString(),
+                sonarrEnabled = !string.IsNullOrEmpty(config.SonarrUrl),
+                radarrEnabled = !string.IsNullOrEmpty(config.RadarrUrl),
+                overseerrEnabled = !string.IsNullOrEmpty(config.OverseerrUrl)
             });
-        }
-
-        [HttpPost("Request/Media")]
-        public async Task<IActionResult> RequestMedia([FromBody] MediaRequest mediaRequest)
-        {
-            if (!IsPluginConfigured())
-            {
-                return BadRequest("Plugin is not configured.");
-            }
-
-            // In a real implementation, we would use _overseerrService to submit the request
-            _logger.LogInformation("Received media request for TMDB/TVDB ID: {ExternalId}", mediaRequest.ExternalId);
-            
-            return Ok(new { success = true, message = "Request submitted successfully via Overseerr." });
-        }
-
-        [HttpPost("Request/Episode")]
-        public async Task<IActionResult> RequestEpisode([FromBody] EpisodeRequest episodeRequest)
-        {
-            if (!IsPluginConfigured())
-            {
-                return BadRequest("Plugin is not configured.");
-            }
-
-            // Granular episode request directly to Sonarr
-            _logger.LogInformation("Received granular episode request: Series {SeriesId}, S{Season}E{Episode}", 
-                episodeRequest.SeriesId, episodeRequest.SeasonNumber, episodeRequest.EpisodeNumber);
-            
-            return Ok(new { success = true, message = "Episode search triggered directly in Sonarr." });
         }
 
         [HttpPost("TestSonarr")]
         public async Task<IActionResult> TestSonarr([FromBody] TestRequest request)
         {
-            var isHealthy = await _sonarrService.IsHealthy(request.Url, request.ApiKey);
-            return Ok(new { success = isHealthy });
+            try
+            {
+                UpdateProxyConfig(request);
+                await _sonarrService.ValidateConnection(request.Url, request.ApiKey);
+                return Ok(new { success = true });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Sonarr connection test failed for {Url}", request.Url);
+                return Ok(new { success = false, message = ex.Message });
+            }
         }
 
         [HttpPost("TestRadarr")]
         public async Task<IActionResult> TestRadarr([FromBody] TestRequest request)
         {
-            var isHealthy = await _radarrService.IsHealthy(request.Url, request.ApiKey);
-            return Ok(new { success = isHealthy });
+            try
+            {
+                UpdateProxyConfig(request);
+                await _radarrService.ValidateConnection(request.Url, request.ApiKey);
+                return Ok(new { success = true });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Radarr connection test failed for {Url}", request.Url);
+                return Ok(new { success = false, message = ex.Message });
+            }
         }
 
         [HttpPost("TestOverseerr")]
         public async Task<IActionResult> TestOverseerr([FromBody] TestRequest request)
         {
-            var isHealthy = await _overseerrService.IsHealthy(request.Url, request.ApiKey);
-            return Ok(new { success = isHealthy });
+            try
+            {
+                UpdateProxyConfig(request);
+                await _overseerrService.ValidateConnection(request.Url, request.ApiKey);
+                return Ok(new { success = true });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Overseerr connection test failed for {Url}", request.Url);
+                return Ok(new { success = false, message = ex.Message });
+            }
         }
 
-        private bool IsPluginConfigured()
+        private void UpdateProxyConfig(TestRequest request)
         {
-            var config = Plugin.Instance?.Configuration;
-            return config != null && 
-                   !string.IsNullOrEmpty(config.SonarrUrl) && 
-                   !string.IsNullOrEmpty(config.RadarrUrl) && 
-                   !string.IsNullOrEmpty(config.OverseerrUrl);
+            // Temporarily update the plugin instance config for the duration of the request/service call
+            // Since BaseApiService reads from Plugin.Instance.Configuration
+            // Note: This is a bit hacky but works for the test connection flow
+            Plugin.Instance.Configuration.ProxyUsername = request.ProxyUsername;
+            Plugin.Instance.Configuration.ProxyPassword = request.ProxyPassword;
         }
-    }
 
-    public class TestRequest
-    {
-        public string Url { get; set; } = string.Empty;
-        public string ApiKey { get; set; } = string.Empty;
-    }
-
-    public class MediaRequest
-    {
-        public string ExternalId { get; set; } = string.Empty;
-        public string MediaType { get; set; } = string.Empty; // "movie" or "tv"
-    }
-
-    public class EpisodeRequest
-    {
-        public string SeriesId { get; set; } = string.Empty;
-        public int SeasonNumber { get; set; }
-        public int EpisodeNumber { get; set; }
+        public class TestRequest
+        {
+            public string Url { get; set; } = string.Empty;
+            public string ApiKey { get; set; } = string.Empty;
+            public string ProxyUsername { get; set; } = string.Empty;
+            public string ProxyPassword { get; set; } = string.Empty;
+        }
     }
 }

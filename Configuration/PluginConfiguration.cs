@@ -6,11 +6,15 @@ namespace Cinefin.ServerPlugin.Configuration
     {
         public string SonarrUrl { get; set; } = string.Empty;
         public string SonarrApiKey { get; set; } = string.Empty;
-
+        
         public string RadarrUrl { get; set; } = string.Empty;
         public string RadarrApiKey { get; set; } = string.Empty;
-
+        
         public string OverseerrUrl { get; set; } = string.Empty;
         public string OverseerrApiKey { get; set; } = string.Empty;
+
+        // Proxy / Basic Auth Support
+        public string ProxyUsername { get; set; } = string.Empty;
+        public string ProxyPassword { get; set; } = string.Empty;
     }
 }

@@ -45,6 +45,17 @@
                     <span>Test Overseerr Connection</span>
                 </button>
 
+                <div class="sectionTitle">Advanced Settings (Proxy / Basic Auth)</div>
+                <div class="fieldDescription">If your apps are behind a reverse proxy that requires Basic Authentication, enter the credentials below.</div>
+                <div class="inputContainer">
+                    <label class="inputLabel" for="ProxyUsername">Proxy Username</label>
+                    <input id="ProxyUsername" name="ProxyUsername" type="text" is="emby-input" />
+                </div>
+                <div class="inputContainer">
+                    <label class="inputLabel" for="ProxyPassword">Proxy Password</label>
+                    <input id="ProxyPassword" name="ProxyPassword" type="password" is="emby-input" />
+                </div>
+
                 <div class="buttonContainer">
                     <button is="emby-button" type="submit" class="raised button-confirm block">
                         <span>Save</span>
@@ -70,6 +81,8 @@
                 $('#RadarrApiKey', page).val(config.RadarrApiKey || "");
                 $('#OverseerrUrl', page).val(config.OverseerrUrl || "");
                 $('#OverseerrApiKey', page).val(config.OverseerrApiKey || "");
+                $('#ProxyUsername', page).val(config.ProxyUsername || "");
+                $('#ProxyPassword', page).val(config.ProxyPassword || "");
                 Dashboard.hideLoadingMsg();
             });
         });
@@ -85,6 +98,8 @@
                 config.RadarrApiKey = $('#RadarrApiKey', page).val();
                 config.OverseerrUrl = $('#OverseerrUrl', page).val();
                 config.OverseerrApiKey = $('#OverseerrApiKey', page).val();
+                config.ProxyUsername = $('#ProxyUsername', page).val();
+                config.ProxyPassword = $('#ProxyPassword', page).val();
 
                 ApiClient.updatePluginConfiguration(CinefinConfig.uniquePluginId, config).then(function (result) {
                     Dashboard.processPluginConfigurationUpdateResult(result);
@@ -110,7 +125,9 @@
             Dashboard.showLoadingMsg();
             var body = {
                 Url: url,
-                ApiKey: apiKey
+                ApiKey: apiKey,
+                ProxyUsername: $('#ProxyUsername').val(),
+                ProxyPassword: $('#ProxyPassword').val()
             };
 
             ApiClient.ajax({
@@ -127,7 +144,7 @@
                     });
                 } else {
                     Dashboard.alert({
-                        message: 'Connection failed. Please check your settings.',
+                        message: 'Connection failed: ' + (result.message || 'Check your settings.'),
                         title: 'Error'
                     });
                 }
