@@ -1,10 +1,25 @@
 using System;
+using System.Collections.Generic;
 using System.Net.Http;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 
 namespace Cinefin.ServerPlugin.Services
 {
+    public class OverseerrRequestPayload
+    {
+        [JsonPropertyName("mediaType")]
+        public string MediaType { get; set; } = string.Empty;
+
+        [JsonPropertyName("mediaId")]
+        public int MediaId { get; set; }
+
+        [JsonPropertyName("seasons")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public List<int>? Seasons { get; set; }
+    }
+
     public class OverseerrService : BaseApiService
     {
         public OverseerrService(IHttpClientFactory httpClientFactory, ILogger<OverseerrService> logger) 
@@ -27,12 +42,27 @@ namespace Cinefin.ServerPlugin.Services
 
         public async Task ValidateConnection(string url, string apiKey)
         {
-            if (string.IsNullOrEmpty(url)) throw new ArgumentException("URL is required");
-            if (string.IsNullOrEmpty(apiKey)) throw new ArgumentException("API Key is required");
+            if (string.IsNullOrWhiteSpace(url)) throw new ArgumentException("URL is required");
+            if (string.IsNullOrWhiteSpace(apiKey)) throw new ArgumentException("API Key is required");
 
             var baseUrl = url.TrimEnd('/');
             // Overseerr uses /api/v1/status
             await GetAsync<object>($"{baseUrl}/api/v1/status", apiKey);
+        }
+
+        public async Task RequestMedia(string url, string apiKey, int tmdbId, string mediaType, List<int>? seasons)
+        {
+            if (string.IsNullOrWhiteSpace(url)) throw new ArgumentException("URL is required");
+            if (string.IsNullOrWhiteSpace(apiKey)) throw new ArgumentException("API Key is required");
+
+            var baseUrl = url.TrimEnd('/');
+            var payload = new OverseerrRequestPayload
+            {
+                MediaType = mediaType,
+                MediaId = tmdbId,
+                Seasons = seasons
+            };
+            await PostAsync($"{baseUrl}/api/v1/request", apiKey, payload);
         }
     }
 }
