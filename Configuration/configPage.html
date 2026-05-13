@@ -1,0 +1,143 @@
+<div id="CinefinConfigPage" data-role="page" class="page type-interior pluginConfigurationPage" 
+     data-require="emby-input,emby-button,emby-select,emby-checkbox">
+    <div data-role="content">
+        <div class="content-primary">
+            <form id="CinefinConfigForm">
+                <div class="sectionTitle">Sonarr Settings</div>
+                <div class="inputContainer">
+                    <label class="inputLabel" for="SonarrUrl">Sonarr URL</label>
+                    <input id="SonarrUrl" name="SonarrUrl" type="text" is="emby-input" />
+                    <div class="fieldDescription">Example: http://localhost:8989</div>
+                </div>
+                <div class="inputContainer">
+                    <label class="inputLabel" for="SonarrApiKey">Sonarr API Key</label>
+                    <input id="SonarrApiKey" name="SonarrApiKey" type="text" is="emby-input" />
+                </div>
+                <button is="emby-button" type="button" id="TestSonarr" class="raised button-cancel">
+                    <span>Test Sonarr Connection</span>
+                </button>
+
+                <div class="sectionTitle">Radarr Settings</div>
+                <div class="inputContainer">
+                    <label class="inputLabel" for="RadarrUrl">Radarr URL</label>
+                    <input id="RadarrUrl" name="RadarrUrl" type="text" is="emby-input" />
+                    <div class="fieldDescription">Example: http://localhost:7878</div>
+                </div>
+                <div class="inputContainer">
+                    <label class="inputLabel" for="RadarrApiKey">Radarr API Key</label>
+                    <input id="RadarrApiKey" name="RadarrApiKey" type="text" is="emby-input" />
+                </div>
+                <button is="emby-button" type="button" id="TestRadarr" class="raised button-cancel">
+                    <span>Test Radarr Connection</span>
+                </button>
+
+                <div class="sectionTitle">Overseerr Settings</div>
+                <div class="inputContainer">
+                    <label class="inputLabel" for="OverseerrUrl">Overseerr URL</label>
+                    <input id="OverseerrUrl" name="OverseerrUrl" type="text" is="emby-input" />
+                    <div class="fieldDescription">Example: http://localhost:5055</div>
+                </div>
+                <div class="inputContainer">
+                    <label class="inputLabel" for="OverseerrApiKey">Overseerr API Key</label>
+                    <input id="OverseerrApiKey" name="OverseerrApiKey" type="text" is="emby-input" />
+                </div>
+                <button is="emby-button" type="button" id="TestOverseerr" class="raised button-cancel">
+                    <span>Test Overseerr Connection</span>
+                </button>
+
+                <div class="buttonContainer">
+                    <button is="emby-button" type="submit" class="raised button-confirm block">
+                        <span>Save</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script type="text/javascript">
+        var CinefinConfig = {
+            uniquePluginId: "90b39515-56f8-4e8c-8f9f-0f6f6727282b"
+        };
+
+        $('#CinefinConfigPage').on('pageshow', function () {
+            var page = this;
+            Dashboard.showLoadingMsg();
+
+            ApiClient.getPluginConfiguration(CinefinConfig.uniquePluginId).then(function (config) {
+                $('#SonarrUrl', page).val(config.SonarrUrl || "");
+                $('#SonarrApiKey', page).val(config.SonarrApiKey || "");
+                $('#RadarrUrl', page).val(config.RadarrUrl || "");
+                $('#RadarrApiKey', page).val(config.RadarrApiKey || "");
+                $('#OverseerrUrl', page).val(config.OverseerrUrl || "");
+                $('#OverseerrApiKey', page).val(config.OverseerrApiKey || "");
+                Dashboard.hideLoadingMsg();
+            });
+        });
+
+        $('#CinefinConfigForm').on('submit', function () {
+            Dashboard.showLoadingMsg();
+            var page = $(this).parents('#CinefinConfigPage')[0];
+
+            ApiClient.getPluginConfiguration(CinefinConfig.uniquePluginId).then(function (config) {
+                config.SonarrUrl = $('#SonarrUrl', page).val();
+                config.SonarrApiKey = $('#SonarrApiKey', page).val();
+                config.RadarrUrl = $('#RadarrUrl', page).val();
+                config.RadarrApiKey = $('#RadarrApiKey', page).val();
+                config.OverseerrUrl = $('#OverseerrUrl', page).val();
+                config.OverseerrApiKey = $('#OverseerrApiKey', page).val();
+
+                ApiClient.updatePluginConfiguration(CinefinConfig.uniquePluginId, config).then(function (result) {
+                    Dashboard.processPluginConfigurationUpdateResult(result);
+                });
+            });
+
+            return false;
+        });
+
+        $('#TestSonarr').on('click', function () {
+            testConnection('TestSonarr', $('#SonarrUrl').val(), $('#SonarrApiKey').val());
+        });
+
+        $('#TestRadarr').on('click', function () {
+            testConnection('TestRadarr', $('#RadarrUrl').val(), $('#RadarrApiKey').val());
+        });
+
+        $('#TestOverseerr').on('click', function () {
+            testConnection('TestOverseerr', $('#OverseerrUrl').val(), $('#OverseerrApiKey').val());
+        });
+
+        function testConnection(endpoint, url, apiKey) {
+            Dashboard.showLoadingMsg();
+            var body = {
+                Url: url,
+                ApiKey: apiKey
+            };
+
+            ApiClient.ajax({
+                type: 'POST',
+                url: ApiClient.getUrl('Cinefin/' + endpoint),
+                data: JSON.stringify(body),
+                contentType: 'application/json'
+            }).then(function (result) {
+                Dashboard.hideLoadingMsg();
+                if (result.success) {
+                    Dashboard.alert({
+                        message: 'Connection successful!',
+                        title: 'Success'
+                    });
+                } else {
+                    Dashboard.alert({
+                        message: 'Connection failed. Please check your settings.',
+                        title: 'Error'
+                    });
+                }
+            }, function () {
+                Dashboard.hideLoadingMsg();
+                Dashboard.alert({
+                    message: 'An error occurred while testing the connection.',
+                    title: 'Error'
+                });
+            });
+        }
+    </script>
+</div>

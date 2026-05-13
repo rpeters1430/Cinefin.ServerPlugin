@@ -1,0 +1,20 @@
+[
+  {
+    "category": "General",
+    "guid": "90b39515-56f8-4e8c-8f9f-0f6f6727282b",
+    "name": "Cinefin Integration",
+    "description": "A secure proxy and orchestration layer for the Cinefin Android app. Integrates Sonarr, Radarr, and Overseerr directly into Jellyfin.",
+    "owner": "rpete",
+    "overview": "Integrates Sonarr, Radarr, and Overseerr into Jellyfin for the Cinefin app.",
+    "versions": [
+      {
+        "version": "1.0.0.0",
+        "changelog": "Initial release with Sonarr, Radarr, and Overseerr integration.",
+        "targetAbi": "10.11.0.0",
+        "sourceUrl": "REPLACE_WITH_GITHUB_RELEASE_ZIP_URL",
+        "checksum": "d370e8ba17970102ca43b5dd02bf11b2",
+        "timestamp": "2026-05-12 19:55:54"
+      }
+    ]
+  }
+]
