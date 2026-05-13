@@ -6,12 +6,9 @@ namespace Cinefin.ServerPlugin.Services
 {
     public class OverseerrService : BaseApiService
     {
-        private readonly ILogger<OverseerrService> _logger;
-
         public OverseerrService(IHttpClientFactory httpClientFactory, ILogger<OverseerrService> logger) 
-            : base(httpClientFactory)
+            : base(httpClientFactory, logger)
         {
-            _logger = logger;
         }
 
         public async Task<bool> IsHealthy()
@@ -28,8 +25,9 @@ namespace Cinefin.ServerPlugin.Services
         {
             try
             {
-                // Overseerr uses /api/v1/settings/main for health check usually or /api/v1/status
-                var result = await GetAsync<object>($"{url}/api/v1/status", apiKey);
+                var baseUrl = url.TrimEnd('/');
+                // Overseerr uses /api/v1/status
+                var result = await GetAsync<object>($"{baseUrl}/api/v1/status", apiKey);
                 return result != null;
             }
             catch

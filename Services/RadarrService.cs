@@ -6,12 +6,9 @@ namespace Cinefin.ServerPlugin.Services
 {
     public class RadarrService : BaseApiService
     {
-        private readonly ILogger<RadarrService> _logger;
-
         public RadarrService(IHttpClientFactory httpClientFactory, ILogger<RadarrService> logger) 
-            : base(httpClientFactory)
+            : base(httpClientFactory, logger)
         {
-            _logger = logger;
         }
 
         public async Task<bool> IsHealthy()
@@ -28,7 +25,8 @@ namespace Cinefin.ServerPlugin.Services
         {
             try
             {
-                var result = await GetAsync<object>($"{url}/api/v3/system/status", apiKey);
+                var baseUrl = url.TrimEnd('/');
+                var result = await GetAsync<object>($"{baseUrl}/api/v3/system/status", apiKey);
                 return result != null;
             }
             catch

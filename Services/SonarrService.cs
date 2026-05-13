@@ -6,12 +6,9 @@ namespace Cinefin.ServerPlugin.Services
 {
     public class SonarrService : BaseApiService
     {
-        private readonly ILogger<SonarrService> _logger;
-
         public SonarrService(IHttpClientFactory httpClientFactory, ILogger<SonarrService> logger) 
-            : base(httpClientFactory)
+            : base(httpClientFactory, logger)
         {
-            _logger = logger;
         }
 
         public async Task<bool> IsHealthy()
@@ -28,7 +25,8 @@ namespace Cinefin.ServerPlugin.Services
         {
             try
             {
-                var result = await GetAsync<object>($"{url}/api/v3/system/status", apiKey);
+                var baseUrl = url.TrimEnd('/');
+                var result = await GetAsync<object>($"{baseUrl}/api/v3/system/status", apiKey);
                 return result != null;
             }
             catch
