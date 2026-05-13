@@ -11,7 +11,7 @@
         "version": "1.0.0.0",
         "changelog": "Initial release with Sonarr, Radarr, and Overseerr integration.",
         "targetAbi": "10.11.0.0",
-        "sourceUrl": "REPLACE_WITH_GITHUB_RELEASE_ZIP_URL",
+        "sourceUrl": "https://github.com/rpeters1430/Cinefin.ServerPlugin/releases/download/v1.0.0.0/Cinefin.ServerPlugin.zip",
         "checksum": "d370e8ba17970102ca43b5dd02bf11b2",
         "timestamp": "2026-05-12 19:55:54"
       }
