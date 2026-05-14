@@ -99,7 +99,7 @@ namespace Cinefin.ServerPlugin.Services
             if (string.IsNullOrWhiteSpace(url)) throw new ArgumentException("URL is required");
             if (string.IsNullOrWhiteSpace(apiKey)) throw new ArgumentException("API Key is required");
 
-            var baseUrl = url.TrimEnd('/');
+            var baseUrl = NormalizeUrl(url);
             
             try
             {
@@ -119,7 +119,7 @@ namespace Cinefin.ServerPlugin.Services
             if (string.IsNullOrWhiteSpace(url)) throw new ArgumentException("URL is required");
             if (string.IsNullOrWhiteSpace(apiKey)) throw new ArgumentException("API Key is required");
 
-            var baseUrl = url.TrimEnd('/');
+            var baseUrl = NormalizeUrl(url);
 
             // Lookup movie using the tmdb: term pattern (consistent with Sonarr, more widely supported)
             var lookupResults = await GetAsync<List<RadarrMovieLookup>>(

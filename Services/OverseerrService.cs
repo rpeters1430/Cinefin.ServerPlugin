@@ -45,7 +45,7 @@ namespace Cinefin.ServerPlugin.Services
             if (string.IsNullOrWhiteSpace(url)) throw new ArgumentException("URL is required");
             if (string.IsNullOrWhiteSpace(apiKey)) throw new ArgumentException("API Key is required");
 
-            var baseUrl = url.TrimEnd('/');
+            var baseUrl = NormalizeUrl(url);
             await GetAsync<object>($"{baseUrl}/api/v1/status", apiKey, proxyUser, proxyPass);
         }
 
@@ -54,7 +54,7 @@ namespace Cinefin.ServerPlugin.Services
             if (string.IsNullOrWhiteSpace(url)) throw new ArgumentException("URL is required");
             if (string.IsNullOrWhiteSpace(apiKey)) throw new ArgumentException("API Key is required");
 
-            var baseUrl = url.TrimEnd('/');
+            var baseUrl = NormalizeUrl(url);
             var payload = new OverseerrRequestPayload
             {
                 MediaType = mediaType,

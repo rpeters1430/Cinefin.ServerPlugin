@@ -28,6 +28,7 @@ namespace Cinefin.ServerPlugin.Services
         {
             request.Headers.Add("X-Api-Key", apiKey);
             request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+            request.Headers.UserAgent.ParseAdd("Cinefin-Jellyfin-Plugin/1.0");
 
             var config = Plugin.Instance?.Configuration;
             var username = proxyUser ?? config?.ProxyUsername;
@@ -40,38 +41,70 @@ namespace Cinefin.ServerPlugin.Services
             }
         }
 
+        protected string NormalizeUrl(string url)
+        {
+            if (string.IsNullOrWhiteSpace(url)) return url;
+            var normalized = url.Trim().TrimEnd('/');
+            if (!normalized.StartsWith("http://", StringComparison.OrdinalIgnoreCase) && 
+                !normalized.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+            {
+                normalized = "https://" + normalized;
+            }
+            return normalized;
+        }
+
         protected async Task<T?> GetAsync<T>(string url, string apiKey, string? proxyUser = null, string? proxyPass = null)
         {
-            var request = new HttpRequestMessage(HttpMethod.Get, url);
-            AddHeaders(request, apiKey, proxyUser, proxyPass);
-
-            var response = await HttpClient.SendAsync(request);
-
-            if (!response.IsSuccessStatusCode)
+            try
             {
-                var errorContent = await response.Content.ReadAsStringAsync();
-                Logger.LogError("GET failed. Status: {StatusCode}, URL: {Url}, Body: {Content}",
-                    response.StatusCode, url, errorContent);
-                throw new HttpRequestException($"Request to {url} failed ({response.StatusCode}): {errorContent}");
-            }
+                var request = new HttpRequestMessage(HttpMethod.Get, url);
+                AddHeaders(request, apiKey, proxyUser, proxyPass);
 
-            return await response.Content.ReadFromJsonAsync<T>();
+                var response = await HttpClient.SendAsync(request);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    var errorContent = await response.Content.ReadAsStringAsync();
+                    Logger.LogError("GET failed. Status: {StatusCode}, URL: {Url}, Body: {Content}",
+                        response.StatusCode, url, errorContent);
+                    throw new HttpRequestException($"Request to {url} failed ({response.StatusCode}): {errorContent}");
+                }
+
+                return await response.Content.ReadFromJsonAsync<T>();
+            }
+            catch (Exception ex) when (ex is not HttpRequestException)
+            {
+                Logger.LogError(ex, "GET failed due to exception. URL: {Url}", url);
+                var message = ex.Message;
+                if (ex.InnerException != null) message += " -> " + ex.InnerException.Message;
+                throw new HttpRequestException($"Connection to {url} failed: {message}", ex);
+            }
         }
 
         protected async Task PostAsync<T>(string url, string apiKey, T data, string? proxyUser = null, string? proxyPass = null)
         {
-            var request = new HttpRequestMessage(HttpMethod.Post, url);
-            AddHeaders(request, apiKey, proxyUser, proxyPass);
-            request.Content = JsonContent.Create(data);
-
-            var response = await HttpClient.SendAsync(request);
-
-            if (!response.IsSuccessStatusCode)
+            try
             {
-                var errorContent = await response.Content.ReadAsStringAsync();
-                Logger.LogError("POST failed. Status: {StatusCode}, URL: {Url}, Body: {Content}",
-                    response.StatusCode, url, errorContent);
-                throw new HttpRequestException($"Request to {url} failed ({response.StatusCode}): {errorContent}");
+                var request = new HttpRequestMessage(HttpMethod.Post, url);
+                AddHeaders(request, apiKey, proxyUser, proxyPass);
+                request.Content = JsonContent.Create(data);
+
+                var response = await HttpClient.SendAsync(request);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    var errorContent = await response.Content.ReadAsStringAsync();
+                    Logger.LogError("POST failed. Status: {StatusCode}, URL: {Url}, Body: {Content}",
+                        response.StatusCode, url, errorContent);
+                    throw new HttpRequestException($"Request to {url} failed ({response.StatusCode}): {errorContent}");
+                }
+            }
+            catch (Exception ex) when (ex is not HttpRequestException)
+            {
+                Logger.LogError(ex, "POST failed due to exception. URL: {Url}", url);
+                var message = ex.Message;
+                if (ex.InnerException != null) message += " -> " + ex.InnerException.Message;
+                throw new HttpRequestException($"Connection to {url} failed: {message}", ex);
             }
         }
     }
