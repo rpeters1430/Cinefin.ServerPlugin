@@ -1,52 +1,95 @@
-<div id="CinefinConfigPage" data-role="page" class="page type-interior pluginConfigurationPage" 
+<div id="CinefinConfigPage" data-role="page" class="page type-interior pluginConfigurationPage"
      data-require="emby-input,emby-button,emby-select,emby-checkbox">
     <div data-role="content">
         <div class="content-primary">
+
+            <div style="background:#1a1a2e;border-left:4px solid #7c4dff;padding:12px 16px;margin-bottom:24px;border-radius:4px;font-size:13px;line-height:1.6">
+                <strong>Docker / reverse-proxy setup?</strong><br>
+                The plugin runs inside the Jellyfin container. If your apps sit behind a reverse proxy
+                (e.g. <code>https://yourhost.com/sonarr</code>), the Jellyfin container usually
+                <em>cannot</em> reach that external address due to Docker hairpin-NAT restrictions.<br><br>
+                Solution: fill in the <strong>Internal URL</strong> fields below using the Docker
+                container name and port. The plugin will use those for all server-side API calls while
+                the URL above is kept only for display / reference.<br><br>
+                Examples for a typical Docker Compose stack:<br>
+                &bull; Sonarr internal: <code>http://sonarr:8989/sonarr</code><br>
+                &bull; Radarr internal: <code>http://radarr:7878/radarr</code><br>
+                &bull; Overseerr internal: <code>http://overseerr:5055</code><br><br>
+                Tip: use the <strong>Run Diagnostics</strong> button at the bottom to test reachability
+                before saving.
+            </div>
+
             <form id="CinefinConfigForm">
-                <div class="sectionTitle">Sonarr Settings</div>
+
+                <!-- ── Sonarr ── -->
+                <div class="sectionTitle">Sonarr</div>
                 <div class="inputContainer">
-                    <label class="inputLabel" for="SonarrUrl">Sonarr URL</label>
-                    <input id="SonarrUrl" name="SonarrUrl" type="text" is="emby-input" />
-                    <div class="fieldDescription">Example: http://localhost:8989</div>
+                    <label class="inputLabel" for="SonarrUrl">External URL</label>
+                    <input id="SonarrUrl" name="SonarrUrl" type="text" is="emby-input"
+                           placeholder="https://yourhost.com/sonarr" />
+                    <div class="fieldDescription">The address you use in your browser (for reference only when an internal URL is set).</div>
                 </div>
                 <div class="inputContainer">
-                    <label class="inputLabel" for="SonarrApiKey">Sonarr API Key</label>
+                    <label class="inputLabel" for="SonarrInternalUrl">Internal URL <span style="font-weight:normal;opacity:.7">(recommended for Docker)</span></label>
+                    <input id="SonarrInternalUrl" name="SonarrInternalUrl" type="text" is="emby-input"
+                           placeholder="http://sonarr:8989/sonarr" />
+                    <div class="fieldDescription">Direct container address used by the plugin for API calls. Leave blank to use the external URL above.</div>
+                </div>
+                <div class="inputContainer">
+                    <label class="inputLabel" for="SonarrApiKey">API Key</label>
                     <input id="SonarrApiKey" name="SonarrApiKey" type="text" is="emby-input" />
                 </div>
                 <button is="emby-button" type="button" id="TestSonarr" class="raised button-cancel">
-                    <span>Test Sonarr Connection</span>
+                    <span>Test Sonarr</span>
                 </button>
 
-                <div class="sectionTitle">Radarr Settings</div>
+                <!-- ── Radarr ── -->
+                <div class="sectionTitle" style="margin-top:24px">Radarr</div>
                 <div class="inputContainer">
-                    <label class="inputLabel" for="RadarrUrl">Radarr URL</label>
-                    <input id="RadarrUrl" name="RadarrUrl" type="text" is="emby-input" />
-                    <div class="fieldDescription">Example: http://localhost:7878</div>
+                    <label class="inputLabel" for="RadarrUrl">External URL</label>
+                    <input id="RadarrUrl" name="RadarrUrl" type="text" is="emby-input"
+                           placeholder="https://yourhost.com/radarr" />
                 </div>
                 <div class="inputContainer">
-                    <label class="inputLabel" for="RadarrApiKey">Radarr API Key</label>
+                    <label class="inputLabel" for="RadarrInternalUrl">Internal URL <span style="font-weight:normal;opacity:.7">(recommended for Docker)</span></label>
+                    <input id="RadarrInternalUrl" name="RadarrInternalUrl" type="text" is="emby-input"
+                           placeholder="http://radarr:7878/radarr" />
+                    <div class="fieldDescription">Leave blank to use the external URL.</div>
+                </div>
+                <div class="inputContainer">
+                    <label class="inputLabel" for="RadarrApiKey">API Key</label>
                     <input id="RadarrApiKey" name="RadarrApiKey" type="text" is="emby-input" />
                 </div>
                 <button is="emby-button" type="button" id="TestRadarr" class="raised button-cancel">
-                    <span>Test Radarr Connection</span>
+                    <span>Test Radarr</span>
                 </button>
 
-                <div class="sectionTitle">Overseerr Settings</div>
+                <!-- ── Overseerr ── -->
+                <div class="sectionTitle" style="margin-top:24px">Overseerr / Jellyseerr</div>
                 <div class="inputContainer">
-                    <label class="inputLabel" for="OverseerrUrl">Overseerr URL</label>
-                    <input id="OverseerrUrl" name="OverseerrUrl" type="text" is="emby-input" />
-                    <div class="fieldDescription">Example: http://localhost:5055</div>
+                    <label class="inputLabel" for="OverseerrUrl">External URL</label>
+                    <input id="OverseerrUrl" name="OverseerrUrl" type="text" is="emby-input"
+                           placeholder="https://yourhost.com/overseerr" />
                 </div>
                 <div class="inputContainer">
-                    <label class="inputLabel" for="OverseerrApiKey">Overseerr API Key</label>
+                    <label class="inputLabel" for="OverseerrInternalUrl">Internal URL <span style="font-weight:normal;opacity:.7">(recommended for Docker)</span></label>
+                    <input id="OverseerrInternalUrl" name="OverseerrInternalUrl" type="text" is="emby-input"
+                           placeholder="http://overseerr:5055" />
+                    <div class="fieldDescription">Leave blank to use the external URL.</div>
+                </div>
+                <div class="inputContainer">
+                    <label class="inputLabel" for="OverseerrApiKey">API Key</label>
                     <input id="OverseerrApiKey" name="OverseerrApiKey" type="text" is="emby-input" />
                 </div>
                 <button is="emby-button" type="button" id="TestOverseerr" class="raised button-cancel">
-                    <span>Test Overseerr Connection</span>
+                    <span>Test Overseerr</span>
                 </button>
 
-                <div class="sectionTitle">Advanced Settings (Proxy / Basic Auth)</div>
-                <div class="fieldDescription">If your apps are behind a reverse proxy that requires Basic Authentication, enter the credentials below.</div>
+                <!-- ── Advanced ── -->
+                <div class="sectionTitle" style="margin-top:24px">Advanced</div>
+                <div class="fieldDescription" style="margin-bottom:12px">
+                    Proxy credentials are only sent when using the external URL (no internal URL set).
+                </div>
                 <div class="inputContainer">
                     <label class="inputLabel" for="ProxyUsername">Proxy Username</label>
                     <input id="ProxyUsername" name="ProxyUsername" type="text" is="emby-input" />
@@ -58,88 +101,88 @@
                 <div class="checkboxContainer">
                     <label>
                         <input id="IgnoreSslErrors" name="IgnoreSslErrors" type="checkbox" is="emby-checkbox" />
-                        <span>Ignore SSL certificate errors (enable for self-signed / internal CA certs)</span>
+                        <span>Ignore SSL certificate errors (self-signed / internal CA)</span>
                     </label>
                 </div>
 
-                <div class="buttonContainer">
-                    <button is="emby-button" type="submit" class="raised button-confirm block">
+                <div class="buttonContainer" style="margin-top:24px;display:flex;gap:12px;flex-wrap:wrap">
+                    <button is="emby-button" type="submit" class="raised button-confirm">
                         <span>Save</span>
+                    </button>
+                    <button is="emby-button" type="button" id="RunDiagnostics" class="raised button-cancel">
+                        <span>Run Diagnostics</span>
                     </button>
                 </div>
             </form>
+
+            <div id="DiagnosticsResult" style="display:none;margin-top:20px;padding:12px 16px;background:#111;border-radius:6px;font-size:12px;font-family:monospace;white-space:pre-wrap;word-break:break-all"></div>
+
         </div>
     </div>
 
     <script type="text/javascript">
-        var CinefinConfig = {
-            uniquePluginId: "90b39515-56f8-4e8c-8f9f-0f6f6727282b"
-        };
+        var CinefinConfig = { uniquePluginId: "90b39515-56f8-4e8c-8f9f-0f6f6727282b" };
 
         $('#CinefinConfigPage').on('pageshow', function () {
-            var page = this;
             Dashboard.showLoadingMsg();
-
             ApiClient.getPluginConfiguration(CinefinConfig.uniquePluginId).then(function (config) {
-                $('#SonarrUrl', page).val(config.SonarrUrl || "");
-                $('#SonarrApiKey', page).val(config.SonarrApiKey || "");
-                $('#RadarrUrl', page).val(config.RadarrUrl || "");
-                $('#RadarrApiKey', page).val(config.RadarrApiKey || "");
-                $('#OverseerrUrl', page).val(config.OverseerrUrl || "");
-                $('#OverseerrApiKey', page).val(config.OverseerrApiKey || "");
-                $('#ProxyUsername', page).val(config.ProxyUsername || "");
-                $('#ProxyPassword', page).val(config.ProxyPassword || "");
-                $('#IgnoreSslErrors', page).prop('checked', config.IgnoreSslErrors || false);
+                $('#SonarrUrl').val(config.SonarrUrl || '');
+                $('#SonarrInternalUrl').val(config.SonarrInternalUrl || '');
+                $('#SonarrApiKey').val(config.SonarrApiKey || '');
+                $('#RadarrUrl').val(config.RadarrUrl || '');
+                $('#RadarrInternalUrl').val(config.RadarrInternalUrl || '');
+                $('#RadarrApiKey').val(config.RadarrApiKey || '');
+                $('#OverseerrUrl').val(config.OverseerrUrl || '');
+                $('#OverseerrInternalUrl').val(config.OverseerrInternalUrl || '');
+                $('#OverseerrApiKey').val(config.OverseerrApiKey || '');
+                $('#ProxyUsername').val(config.ProxyUsername || '');
+                $('#ProxyPassword').val(config.ProxyPassword || '');
+                $('#IgnoreSslErrors').prop('checked', config.IgnoreSslErrors || false);
                 Dashboard.hideLoadingMsg();
             });
         });
 
         $('#CinefinConfigForm').on('submit', function () {
             Dashboard.showLoadingMsg();
-            var page = $(this).parents('#CinefinConfigPage')[0];
-
             ApiClient.getPluginConfiguration(CinefinConfig.uniquePluginId).then(function (config) {
-                config.SonarrUrl = $('#SonarrUrl', page).val();
-                config.SonarrApiKey = $('#SonarrApiKey', page).val();
-                config.RadarrUrl = $('#RadarrUrl', page).val();
-                config.RadarrApiKey = $('#RadarrApiKey', page).val();
-                config.OverseerrUrl = $('#OverseerrUrl', page).val();
-                config.OverseerrApiKey = $('#OverseerrApiKey', page).val();
-                config.ProxyUsername = $('#ProxyUsername', page).val();
-                config.ProxyPassword = $('#ProxyPassword', page).val();
-                config.IgnoreSslErrors = $('#IgnoreSslErrors', page).is(':checked');
-
+                config.SonarrUrl = $('#SonarrUrl').val();
+                config.SonarrInternalUrl = $('#SonarrInternalUrl').val();
+                config.SonarrApiKey = $('#SonarrApiKey').val();
+                config.RadarrUrl = $('#RadarrUrl').val();
+                config.RadarrInternalUrl = $('#RadarrInternalUrl').val();
+                config.RadarrApiKey = $('#RadarrApiKey').val();
+                config.OverseerrUrl = $('#OverseerrUrl').val();
+                config.OverseerrInternalUrl = $('#OverseerrInternalUrl').val();
+                config.OverseerrApiKey = $('#OverseerrApiKey').val();
+                config.ProxyUsername = $('#ProxyUsername').val();
+                config.ProxyPassword = $('#ProxyPassword').val();
+                config.IgnoreSslErrors = $('#IgnoreSslErrors').is(':checked');
                 ApiClient.updatePluginConfiguration(CinefinConfig.uniquePluginId, config).then(function (result) {
                     Dashboard.processPluginConfigurationUpdateResult(result);
                 });
             });
-
             return false;
         });
 
         $('#TestSonarr').on('click', function () {
-            testConnection('TestSonarr', $('#SonarrUrl').val(), $('#SonarrApiKey').val());
+            testConnection('TestSonarr', $('#SonarrInternalUrl').val() || $('#SonarrUrl').val(), $('#SonarrApiKey').val());
         });
-
         $('#TestRadarr').on('click', function () {
-            testConnection('TestRadarr', $('#RadarrUrl').val(), $('#RadarrApiKey').val());
+            testConnection('TestRadarr', $('#RadarrInternalUrl').val() || $('#RadarrUrl').val(), $('#RadarrApiKey').val());
         });
-
         $('#TestOverseerr').on('click', function () {
-            testConnection('TestOverseerr', $('#OverseerrUrl').val(), $('#OverseerrApiKey').val());
+            testConnection('TestOverseerr', $('#OverseerrInternalUrl').val() || $('#OverseerrUrl').val(), $('#OverseerrApiKey').val());
         });
 
         function testConnection(endpoint, url, apiKey) {
             Dashboard.showLoadingMsg();
-            var page = $('#CinefinConfigPage')[0];
             var body = {
                 Url: url,
                 ApiKey: apiKey,
                 ProxyUsername: $('#ProxyUsername').val(),
                 ProxyPassword: $('#ProxyPassword').val(),
-                IgnoreSsl: $('#IgnoreSslErrors', page).is(':checked')
+                IgnoreSsl: $('#IgnoreSslErrors').is(':checked')
             };
-
             ApiClient.ajax({
                 type: 'POST',
                 url: ApiClient.getUrl('Cinefin/' + endpoint),
@@ -147,24 +190,41 @@
                 contentType: 'application/json'
             }).then(function (result) {
                 Dashboard.hideLoadingMsg();
-                if (result.success) {
-                    Dashboard.alert({
-                        message: 'Connection successful!',
-                        title: 'Success'
-                    });
-                } else {
-                    Dashboard.alert({
-                        message: 'Connection failed: ' + (result.message || 'Check your settings.'),
-                        title: 'Error'
-                    });
-                }
+                Dashboard.alert({
+                    message: result.success ? 'Connection successful!' : 'Failed: ' + (result.message || 'Unknown error'),
+                    title: result.success ? 'Success' : 'Error'
+                });
             }, function () {
                 Dashboard.hideLoadingMsg();
-                Dashboard.alert({
-                    message: 'An error occurred while testing the connection.',
-                    title: 'Error'
-                });
+                Dashboard.alert({ message: 'Request to plugin failed. Check Jellyfin logs.', title: 'Error' });
             });
         }
+
+        $('#RunDiagnostics').on('click', function () {
+            var resultBox = $('#DiagnosticsResult');
+            resultBox.text('Running diagnostics…').show();
+            ApiClient.ajax({
+                type: 'GET',
+                url: ApiClient.getUrl('Cinefin/Diagnostics')
+            }).then(function (data) {
+                var lines = [];
+                (data.diagnostics || []).forEach(function (d) {
+                    if (d.skipped) {
+                        lines.push('[' + d.service + '] skipped — ' + d.reason);
+                        return;
+                    }
+                    lines.push('[' + d.service + ']');
+                    lines.push('  Effective URL : ' + d.effectiveUrl);
+                    if (d.usingInternalUrl) lines.push('  External URL  : ' + d.externalUrl + ' (not used for API calls)');
+                    lines.push('  TCP reachable : ' + (d.tcpReachable ? '✓ yes' : '✗ no — ' + (d.tcpError || '')));
+                    lines.push('  HTTP reachable: ' + (d.httpReachable ? '✓ yes' : '✗ no — ' + (d.httpError || '')));
+                    if (d.suggestion) lines.push('  ⚠ ' + d.suggestion);
+                    lines.push('');
+                });
+                resultBox.text(lines.join('\n'));
+            }, function () {
+                resultBox.text('Diagnostics request failed. Ensure the plugin is loaded and you are logged in as admin.');
+            });
+        });
     </script>
 </div>

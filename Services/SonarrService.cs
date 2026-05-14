@@ -159,40 +159,35 @@ namespace Cinefin.ServerPlugin.Services
             }
         }
 
-        public async Task AddSeries(string url, string apiKey, int tvdbId, List<int>? requestedSeasons)
+        public async Task AddSeries(string url, string apiKey, int tvdbId, List<int>? requestedSeasons, string? proxyUser = null, string? proxyPass = null)
         {
             if (string.IsNullOrWhiteSpace(url)) throw new ArgumentException("URL is required");
             if (string.IsNullOrWhiteSpace(apiKey)) throw new ArgumentException("API Key is required");
 
             var baseUrl = NormalizeUrl(url);
 
-            // Lookup series by TVDB ID
             var lookupResults = await GetAsync<List<SonarrSeriesLookup>>(
-                $"{baseUrl}/api/v3/series/lookup?term=tvdb:{tvdbId}", apiKey);
+                $"{baseUrl}/api/v3/series/lookup?term=tvdb:{tvdbId}", apiKey, proxyUser, proxyPass);
 
             if (lookupResults == null || lookupResults.Count == 0)
                 throw new InvalidOperationException($"Series with TVDB ID {tvdbId} not found in Sonarr lookup.");
 
             var series = lookupResults[0];
 
-            // Resolve root folder path
             var rootFolderPath = series.RootFolderPath;
             if (string.IsNullOrWhiteSpace(rootFolderPath))
             {
-                var rootFolders = await GetAsync<List<SonarrRootFolder>>($"{baseUrl}/api/v3/rootFolder", apiKey);
+                var rootFolders = await GetAsync<List<SonarrRootFolder>>($"{baseUrl}/api/v3/rootFolder", apiKey, proxyUser, proxyPass);
                 rootFolderPath = rootFolders?.FirstOrDefault()?.Path ?? "/tv";
             }
 
-            // Resolve quality profile
             var qualityProfileId = series.QualityProfileId;
             if (qualityProfileId == 0)
             {
-                var profiles = await GetAsync<List<SonarrQualityProfile>>($"{baseUrl}/api/v3/qualityProfile", apiKey);
+                var profiles = await GetAsync<List<SonarrQualityProfile>>($"{baseUrl}/api/v3/qualityProfile", apiKey, proxyUser, proxyPass);
                 qualityProfileId = profiles?.FirstOrDefault()?.Id ?? 1;
             }
 
-            // Build seasons list: all seasons > 0 monitored; season 0 (specials) not monitored.
-            // If specific seasons requested, only those seasons are monitored.
             var seasons = series.Seasons.Select(s => new SonarrSeason
             {
                 SeasonNumber = s.SeasonNumber,
@@ -215,28 +210,26 @@ namespace Cinefin.ServerPlugin.Services
                 Images = series.Images
             };
 
-            await PostAsync($"{baseUrl}/api/v3/series", apiKey, addRequest);
+            await PostAsync($"{baseUrl}/api/v3/series", apiKey, addRequest, proxyUser, proxyPass);
         }
 
-        public async Task RequestEpisode(string url, string apiKey, int tvdbId, int seasonNumber, int episodeNumber)
+        public async Task RequestEpisode(string url, string apiKey, int tvdbId, int seasonNumber, int episodeNumber, string? proxyUser = null, string? proxyPass = null)
         {
             if (string.IsNullOrWhiteSpace(url)) throw new ArgumentException("URL is required");
             if (string.IsNullOrWhiteSpace(apiKey)) throw new ArgumentException("API Key is required");
 
             var baseUrl = NormalizeUrl(url);
 
-            // Find series in Sonarr by TVDB ID
             var seriesList = await GetAsync<List<SonarrSeriesLookup>>(
-                $"{baseUrl}/api/v3/series?tvdbId={tvdbId}", apiKey);
+                $"{baseUrl}/api/v3/series?tvdbId={tvdbId}", apiKey, proxyUser, proxyPass);
 
             if (seriesList == null || seriesList.Count == 0)
                 throw new InvalidOperationException($"Series with TVDB ID {tvdbId} is not in Sonarr.");
 
             var series = seriesList[0];
 
-            // Find the specific episode
             var episodes = await GetAsync<List<SonarrEpisode>>(
-                $"{baseUrl}/api/v3/episode?seriesId={series.Id}&seasonNumber={seasonNumber}", apiKey);
+                $"{baseUrl}/api/v3/episode?seriesId={series.Id}&seasonNumber={seasonNumber}", apiKey, proxyUser, proxyPass);
 
             var episode = episodes?.FirstOrDefault(e => e.EpisodeNumber == episodeNumber);
             if (episode == null)
@@ -249,7 +242,7 @@ namespace Cinefin.ServerPlugin.Services
                 Name = "EpisodeSearch",
                 EpisodeIds = new List<int> { episode.Id }
             };
-            await PostAsync($"{baseUrl}/api/v3/command", apiKey, command);
+            await PostAsync($"{baseUrl}/api/v3/command", apiKey, command, proxyUser, proxyPass);
         }
     }
 }

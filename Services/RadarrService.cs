@@ -114,28 +114,25 @@ namespace Cinefin.ServerPlugin.Services
             }
         }
 
-        public async Task AddMovie(string url, string apiKey, int tmdbId)
+        public async Task AddMovie(string url, string apiKey, int tmdbId, string? proxyUser = null, string? proxyPass = null)
         {
             if (string.IsNullOrWhiteSpace(url)) throw new ArgumentException("URL is required");
             if (string.IsNullOrWhiteSpace(apiKey)) throw new ArgumentException("API Key is required");
 
             var baseUrl = NormalizeUrl(url);
 
-            // Lookup movie using the tmdb: term pattern (consistent with Sonarr, more widely supported)
             var lookupResults = await GetAsync<List<RadarrMovieLookup>>(
-                $"{baseUrl}/api/v3/movie/lookup?term=tmdb:{tmdbId}", apiKey);
+                $"{baseUrl}/api/v3/movie/lookup?term=tmdb:{tmdbId}", apiKey, proxyUser, proxyPass);
 
             if (lookupResults == null || lookupResults.Count == 0)
                 throw new InvalidOperationException($"Movie with TMDB ID {tmdbId} not found in Radarr lookup.");
 
             var movie = lookupResults[0];
 
-            // Resolve root folder path
-            var rootFolders = await GetAsync<List<RadarrRootFolder>>($"{baseUrl}/api/v3/rootFolder", apiKey);
+            var rootFolders = await GetAsync<List<RadarrRootFolder>>($"{baseUrl}/api/v3/rootFolder", apiKey, proxyUser, proxyPass);
             var rootFolderPath = rootFolders?.FirstOrDefault()?.Path ?? "/movies";
 
-            // Resolve quality profile
-            var profiles = await GetAsync<List<RadarrQualityProfile>>($"{baseUrl}/api/v3/qualityProfile", apiKey);
+            var profiles = await GetAsync<List<RadarrQualityProfile>>($"{baseUrl}/api/v3/qualityProfile", apiKey, proxyUser, proxyPass);
             var qualityProfileId = profiles?.FirstOrDefault()?.Id ?? 1;
 
             var addRequest = new RadarrAddMovieRequest
@@ -151,7 +148,7 @@ namespace Cinefin.ServerPlugin.Services
                 AddOptions = new RadarrAddOptions { SearchForMovie = true }
             };
 
-            await PostAsync($"{baseUrl}/api/v3/movie", apiKey, addRequest);
+            await PostAsync($"{baseUrl}/api/v3/movie", apiKey, addRequest, proxyUser, proxyPass);
         }
     }
 }

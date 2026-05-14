@@ -49,7 +49,7 @@ namespace Cinefin.ServerPlugin.Services
             await GetAsync<object>($"{baseUrl}/api/v1/status", apiKey, proxyUser, proxyPass);
         }
 
-        public async Task RequestMedia(string url, string apiKey, int tmdbId, string mediaType, List<int>? seasons)
+        public async Task RequestMedia(string url, string apiKey, int tmdbId, string mediaType, List<int>? seasons, string? proxyUser = null, string? proxyPass = null)
         {
             if (string.IsNullOrWhiteSpace(url)) throw new ArgumentException("URL is required");
             if (string.IsNullOrWhiteSpace(apiKey)) throw new ArgumentException("API Key is required");
@@ -61,7 +61,7 @@ namespace Cinefin.ServerPlugin.Services
                 MediaId = tmdbId,
                 Seasons = seasons
             };
-            await PostAsync($"{baseUrl}/api/v1/request", apiKey, payload);
+            await PostAsync($"{baseUrl}/api/v1/request", apiKey, payload, proxyUser, proxyPass);
         }
     }
 }

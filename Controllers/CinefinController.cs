@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Net.Http;
+using System.Net.Sockets;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -37,7 +39,7 @@ namespace Cinefin.ServerPlugin.Controllers
             var plugin = Plugin.Instance!;
             var config = plugin.Configuration;
             var capabilities = new List<string>();
-            
+
             bool sonarrEnabled = !string.IsNullOrWhiteSpace(config.SonarrUrl) && !string.IsNullOrWhiteSpace(config.SonarrApiKey);
             bool radarrEnabled = !string.IsNullOrWhiteSpace(config.RadarrUrl) && !string.IsNullOrWhiteSpace(config.RadarrApiKey);
             bool overseerrEnabled = !string.IsNullOrWhiteSpace(config.OverseerrUrl) && !string.IsNullOrWhiteSpace(config.OverseerrApiKey);
@@ -52,6 +54,87 @@ namespace Cinefin.ServerPlugin.Controllers
                 capabilities = capabilities,
                 isConfigured = sonarrEnabled || radarrEnabled || overseerrEnabled
             });
+        }
+
+        /// <summary>
+        /// Tests TCP reachability and HTTP connectivity for all configured services.
+        /// Returns actionable diagnostics to help identify Docker networking / SSL issues.
+        /// </summary>
+        [HttpGet("Diagnostics")]
+        public async Task<IActionResult> GetDiagnostics()
+        {
+            var config = Plugin.Instance!.Configuration;
+            var results = new List<object>();
+
+            async Task<object> Probe(string name, string effectiveUrl, string externalUrl)
+            {
+                if (string.IsNullOrWhiteSpace(effectiveUrl))
+                    return new { service = name, skipped = true, reason = "Not configured" };
+
+                var usingInternal = effectiveUrl != externalUrl;
+                string? tcpError = null;
+                string? httpError = null;
+                bool tcpOk = false;
+                bool httpOk = false;
+
+                try
+                {
+                    var uri = new Uri(effectiveUrl);
+                    var port = uri.Port > 0 ? uri.Port : (uri.Scheme == "https" ? 443 : 80);
+                    using var tcp = new TcpClient();
+                    await tcp.ConnectAsync(uri.Host, port).WaitAsync(TimeSpan.FromSeconds(5));
+                    tcpOk = true;
+                }
+                catch (Exception ex)
+                {
+                    tcpError = ex.Message;
+                }
+
+                if (tcpOk)
+                {
+                    try
+                    {
+                        using var http = new HttpClient(new HttpClientHandler
+                        {
+                            ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator,
+                            AllowAutoRedirect = true,
+                        });
+                        http.Timeout = TimeSpan.FromSeconds(8);
+                        var response = await http.GetAsync(effectiveUrl);
+                        httpOk = (int)response.StatusCode < 500;
+                        if (!httpOk) httpError = $"HTTP {(int)response.StatusCode} {response.ReasonPhrase}";
+                    }
+                    catch (Exception ex)
+                    {
+                        httpError = ex.Message;
+                    }
+                }
+
+                return new
+                {
+                    service = name,
+                    effectiveUrl,
+                    externalUrl,
+                    usingInternalUrl = usingInternal,
+                    tcpReachable = tcpOk,
+                    tcpError,
+                    httpReachable = httpOk,
+                    httpError,
+                    suggestion = (!tcpOk)
+                        ? (usingInternal
+                            ? "TCP failed on internal URL. Check Docker container name/network and that the port is correct."
+                            : "TCP failed on external URL. For Docker setups, set an Internal URL using the container name (e.g. http://sonarr:8989/sonarr).")
+                        : (!httpOk
+                            ? "TCP succeeded but HTTP failed. Check the base path and API key."
+                            : null)
+                };
+            }
+
+            results.Add(await Probe("Sonarr", config.EffectiveSonarrUrl, config.SonarrUrl));
+            results.Add(await Probe("Radarr", config.EffectiveRadarrUrl, config.RadarrUrl));
+            results.Add(await Probe("Overseerr", config.EffectiveOverseerrUrl, config.OverseerrUrl));
+
+            return Ok(new { diagnostics = results });
         }
 
         [HttpPost("TestSonarr")]
@@ -130,15 +213,22 @@ namespace Cinefin.ServerPlugin.Controllers
                 if (!int.TryParse(request.ExternalId, out var externalIdInt))
                     return BadRequest(new { success = false, message = $"Invalid ID format: '{request.ExternalId}'." });
 
+                // Use internal URLs (Docker container addresses) when configured — avoids
+                // hairpin NAT failures when the Jellyfin container can't reach the external proxy URL.
+                // Proxy auth headers are only sent when going through the external URL.
+                string? proxyUser = null, proxyPass = null;
+
                 if (request.MediaType == "movie")
                 {
                     if (!string.IsNullOrWhiteSpace(config.OverseerrUrl) && !string.IsNullOrWhiteSpace(config.OverseerrApiKey))
                     {
-                        await _overseerrService.RequestMedia(config.OverseerrUrl, config.OverseerrApiKey, externalIdInt, request.MediaType, null);
+                        if (config.OverseerrUsesProxy) { proxyUser = config.ProxyUsername; proxyPass = config.ProxyPassword; }
+                        await _overseerrService.RequestMedia(config.EffectiveOverseerrUrl, config.OverseerrApiKey, externalIdInt, request.MediaType, null, proxyUser, proxyPass);
                     }
                     else if (!string.IsNullOrWhiteSpace(config.RadarrUrl) && !string.IsNullOrWhiteSpace(config.RadarrApiKey))
                     {
-                        await _radarrService.AddMovie(config.RadarrUrl, config.RadarrApiKey, externalIdInt);
+                        if (config.RadarrUsesProxy) { proxyUser = config.ProxyUsername; proxyPass = config.ProxyPassword; }
+                        await _radarrService.AddMovie(config.EffectiveRadarrUrl, config.RadarrApiKey, externalIdInt, proxyUser, proxyPass);
                     }
                     else
                     {
@@ -149,11 +239,13 @@ namespace Cinefin.ServerPlugin.Controllers
                 {
                     if (!string.IsNullOrWhiteSpace(config.OverseerrUrl) && !string.IsNullOrWhiteSpace(config.OverseerrApiKey))
                     {
-                        await _overseerrService.RequestMedia(config.OverseerrUrl, config.OverseerrApiKey, externalIdInt, request.MediaType, request.Seasons);
+                        if (config.OverseerrUsesProxy) { proxyUser = config.ProxyUsername; proxyPass = config.ProxyPassword; }
+                        await _overseerrService.RequestMedia(config.EffectiveOverseerrUrl, config.OverseerrApiKey, externalIdInt, request.MediaType, request.Seasons, proxyUser, proxyPass);
                     }
                     else if (!string.IsNullOrWhiteSpace(config.SonarrUrl) && !string.IsNullOrWhiteSpace(config.SonarrApiKey))
                     {
-                        await _sonarrService.AddSeries(config.SonarrUrl, config.SonarrApiKey, externalIdInt, request.Seasons);
+                        if (config.SonarrUsesProxy) { proxyUser = config.ProxyUsername; proxyPass = config.ProxyPassword; }
+                        await _sonarrService.AddSeries(config.EffectiveSonarrUrl, config.SonarrApiKey, externalIdInt, request.Seasons, proxyUser, proxyPass);
                     }
                     else
                     {
@@ -183,7 +275,9 @@ namespace Cinefin.ServerPlugin.Controllers
                 if (!int.TryParse(request.SeriesId, out var seriesIdInt))
                     return BadRequest(new { success = false, message = $"Invalid series ID format: '{request.SeriesId}'." });
 
-                await _sonarrService.RequestEpisode(config.SonarrUrl, config.SonarrApiKey, seriesIdInt, request.SeasonNumber, request.EpisodeNumber);
+                string? epProxyUser = config.SonarrUsesProxy ? config.ProxyUsername : null;
+                string? epProxyPass = config.SonarrUsesProxy ? config.ProxyPassword : null;
+                await _sonarrService.RequestEpisode(config.EffectiveSonarrUrl, config.SonarrApiKey, seriesIdInt, request.SeasonNumber, request.EpisodeNumber, epProxyUser, epProxyPass);
                 return Ok(new { success = true, message = "Episode search triggered successfully" });
             }
             catch (Exception ex)
