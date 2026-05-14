@@ -55,6 +55,12 @@
                     <label class="inputLabel" for="ProxyPassword">Proxy Password</label>
                     <input id="ProxyPassword" name="ProxyPassword" type="password" is="emby-input" />
                 </div>
+                <div class="checkboxContainer">
+                    <label>
+                        <input id="IgnoreSslErrors" name="IgnoreSslErrors" type="checkbox" is="emby-checkbox" />
+                        <span>Ignore SSL certificate errors (enable for self-signed / internal CA certs)</span>
+                    </label>
+                </div>
 
                 <div class="buttonContainer">
                     <button is="emby-button" type="submit" class="raised button-confirm block">
@@ -83,6 +89,7 @@
                 $('#OverseerrApiKey', page).val(config.OverseerrApiKey || "");
                 $('#ProxyUsername', page).val(config.ProxyUsername || "");
                 $('#ProxyPassword', page).val(config.ProxyPassword || "");
+                $('#IgnoreSslErrors', page).prop('checked', config.IgnoreSslErrors || false);
                 Dashboard.hideLoadingMsg();
             });
         });
@@ -100,6 +107,7 @@
                 config.OverseerrApiKey = $('#OverseerrApiKey', page).val();
                 config.ProxyUsername = $('#ProxyUsername', page).val();
                 config.ProxyPassword = $('#ProxyPassword', page).val();
+                config.IgnoreSslErrors = $('#IgnoreSslErrors', page).is(':checked');
 
                 ApiClient.updatePluginConfiguration(CinefinConfig.uniquePluginId, config).then(function (result) {
                     Dashboard.processPluginConfigurationUpdateResult(result);

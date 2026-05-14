@@ -94,14 +94,13 @@ namespace Cinefin.ServerPlugin.Services
             }
         }
 
-        public async Task ValidateConnection(string url, string apiKey)
+        public async Task ValidateConnection(string url, string apiKey, string? proxyUser = null, string? proxyPass = null)
         {
             if (string.IsNullOrWhiteSpace(url)) throw new ArgumentException("URL is required");
             if (string.IsNullOrWhiteSpace(apiKey)) throw new ArgumentException("API Key is required");
 
             var baseUrl = url.TrimEnd('/');
-            // Try v3 status endpoint
-            await GetAsync<object>($"{baseUrl}/api/v3/system/status", apiKey);
+            await GetAsync<object>($"{baseUrl}/api/v3/system/status", apiKey, proxyUser, proxyPass);
         }
 
         public async Task AddMovie(string url, string apiKey, int tmdbId)

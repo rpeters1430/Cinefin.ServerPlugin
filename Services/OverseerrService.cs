@@ -40,14 +40,13 @@ namespace Cinefin.ServerPlugin.Services
             }
         }
 
-        public async Task ValidateConnection(string url, string apiKey)
+        public async Task ValidateConnection(string url, string apiKey, string? proxyUser = null, string? proxyPass = null)
         {
             if (string.IsNullOrWhiteSpace(url)) throw new ArgumentException("URL is required");
             if (string.IsNullOrWhiteSpace(apiKey)) throw new ArgumentException("API Key is required");
 
             var baseUrl = url.TrimEnd('/');
-            // Overseerr uses /api/v1/status
-            await GetAsync<object>($"{baseUrl}/api/v1/status", apiKey);
+            await GetAsync<object>($"{baseUrl}/api/v1/status", apiKey, proxyUser, proxyPass);
         }
 
         public async Task RequestMedia(string url, string apiKey, int tmdbId, string mediaType, List<int>? seasons)

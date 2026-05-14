@@ -16,5 +16,8 @@ namespace Cinefin.ServerPlugin.Configuration
         // Proxy / Basic Auth Support
         public string ProxyUsername { get; set; } = string.Empty;
         public string ProxyPassword { get; set; } = string.Empty;
+
+        // Set true if your reverse proxy uses a self-signed or internal CA certificate
+        public bool IgnoreSslErrors { get; set; } = false;
     }
 }

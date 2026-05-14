@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Cinefin.ServerPlugin.Configuration;
 using Cinefin.ServerPlugin.Services;
@@ -10,6 +11,7 @@ namespace Cinefin.ServerPlugin.Controllers
 {
     [ApiController]
     [Route("Cinefin")]
+    [Authorize]
     public class CinefinController : ControllerBase
     {
         private readonly SonarrService _sonarrService;
@@ -32,13 +34,23 @@ namespace Cinefin.ServerPlugin.Controllers
         [HttpGet("Info")]
         public IActionResult GetInfo()
         {
-            var config = Plugin.Instance.Configuration;
+            var plugin = Plugin.Instance!;
+            var config = plugin.Configuration;
+            var capabilities = new List<string>();
+            
+            bool sonarrEnabled = !string.IsNullOrWhiteSpace(config.SonarrUrl) && !string.IsNullOrWhiteSpace(config.SonarrApiKey);
+            bool radarrEnabled = !string.IsNullOrWhiteSpace(config.RadarrUrl) && !string.IsNullOrWhiteSpace(config.RadarrApiKey);
+            bool overseerrEnabled = !string.IsNullOrWhiteSpace(config.OverseerrUrl) && !string.IsNullOrWhiteSpace(config.OverseerrApiKey);
+
+            if (sonarrEnabled) capabilities.Add("sonarr");
+            if (radarrEnabled) capabilities.Add("radarr");
+            if (overseerrEnabled) capabilities.Add("overseerr");
+
             return Ok(new
             {
-                version = Plugin.Instance.Version.ToString(),
-                sonarrEnabled = !string.IsNullOrWhiteSpace(config.SonarrUrl) && !string.IsNullOrWhiteSpace(config.SonarrApiKey),
-                radarrEnabled = !string.IsNullOrWhiteSpace(config.RadarrUrl) && !string.IsNullOrWhiteSpace(config.RadarrApiKey),
-                overseerrEnabled = !string.IsNullOrWhiteSpace(config.OverseerrUrl) && !string.IsNullOrWhiteSpace(config.OverseerrApiKey)
+                version = plugin.Version.ToString(),
+                capabilities = capabilities,
+                isConfigured = sonarrEnabled || radarrEnabled || overseerrEnabled
             });
         }
 
@@ -47,9 +59,8 @@ namespace Cinefin.ServerPlugin.Controllers
         {
             try
             {
-                UpdateProxyConfig(request);
-                await _sonarrService.ValidateConnection(request.Url, request.ApiKey);
-                return Ok(new { success = true });
+                await _sonarrService.ValidateConnection(request.Url, request.ApiKey, request.ProxyUsername, request.ProxyPassword);
+                return Ok(new { success = true, message = "Connection successful" });
             }
             catch (Exception ex)
             {
@@ -63,9 +74,8 @@ namespace Cinefin.ServerPlugin.Controllers
         {
             try
             {
-                UpdateProxyConfig(request);
-                await _radarrService.ValidateConnection(request.Url, request.ApiKey);
-                return Ok(new { success = true });
+                await _radarrService.ValidateConnection(request.Url, request.ApiKey, request.ProxyUsername, request.ProxyPassword);
+                return Ok(new { success = true, message = "Connection successful" });
             }
             catch (Exception ex)
             {
@@ -79,9 +89,8 @@ namespace Cinefin.ServerPlugin.Controllers
         {
             try
             {
-                UpdateProxyConfig(request);
-                await _overseerrService.ValidateConnection(request.Url, request.ApiKey);
-                return Ok(new { success = true });
+                await _overseerrService.ValidateConnection(request.Url, request.ApiKey, request.ProxyUsername, request.ProxyPassword);
+                return Ok(new { success = true, message = "Connection successful" });
             }
             catch (Exception ex)
             {
@@ -90,84 +99,78 @@ namespace Cinefin.ServerPlugin.Controllers
             }
         }
 
-        [HttpPost("RequestMedia")]
+        [HttpPost("Request/Media")]
         public async Task<IActionResult> RequestMedia([FromBody] MediaRequestBody request)
         {
             try
             {
-                var config = Plugin.Instance.Configuration;
+                var config = Plugin.Instance!.Configuration;
 
-                if (!int.TryParse(request.TmdbId, out var tmdbIdInt))
-                    return BadRequest(new { success = false, message = $"Invalid TMDB ID format: '{request.TmdbId}'." });
+                if (!int.TryParse(request.ExternalId, out var externalIdInt))
+                    return BadRequest(new { success = false, message = $"Invalid ID format: '{request.ExternalId}'." });
 
                 if (request.MediaType == "movie")
                 {
                     if (!string.IsNullOrWhiteSpace(config.OverseerrUrl) && !string.IsNullOrWhiteSpace(config.OverseerrApiKey))
                     {
-                        await _overseerrService.RequestMedia(config.OverseerrUrl, config.OverseerrApiKey, tmdbIdInt, request.MediaType, null);
+                        await _overseerrService.RequestMedia(config.OverseerrUrl, config.OverseerrApiKey, externalIdInt, request.MediaType, null);
                     }
                     else if (!string.IsNullOrWhiteSpace(config.RadarrUrl) && !string.IsNullOrWhiteSpace(config.RadarrApiKey))
                     {
-                        await _radarrService.AddMovie(config.RadarrUrl, config.RadarrApiKey, tmdbIdInt);
+                        await _radarrService.AddMovie(config.RadarrUrl, config.RadarrApiKey, externalIdInt);
                     }
                     else
                     {
-                        return StatusCode(503, new { success = false, message = "No movie request service configured." });
+                        return Ok(new { success = false, message = "No movie request service configured on server." });
                     }
                 }
                 else
                 {
                     if (!string.IsNullOrWhiteSpace(config.OverseerrUrl) && !string.IsNullOrWhiteSpace(config.OverseerrApiKey))
                     {
-                        await _overseerrService.RequestMedia(config.OverseerrUrl, config.OverseerrApiKey, tmdbIdInt, request.MediaType, request.Seasons);
+                        await _overseerrService.RequestMedia(config.OverseerrUrl, config.OverseerrApiKey, externalIdInt, request.MediaType, request.Seasons);
                     }
                     else if (!string.IsNullOrWhiteSpace(config.SonarrUrl) && !string.IsNullOrWhiteSpace(config.SonarrApiKey))
                     {
-                        await _sonarrService.AddSeries(config.SonarrUrl, config.SonarrApiKey, tmdbIdInt, request.Seasons);
+                        await _sonarrService.AddSeries(config.SonarrUrl, config.SonarrApiKey, externalIdInt, request.Seasons);
                     }
                     else
                     {
-                        return StatusCode(503, new { success = false, message = "No TV request service configured." });
+                        return Ok(new { success = false, message = "No TV request service configured on server." });
                     }
                 }
 
-                return Ok(new { success = true });
+                return Ok(new { success = true, message = "Request submitted successfully" });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to request media for TmdbId={TmdbId}", request.TmdbId);
-                return StatusCode(500, new { success = false, message = ex.Message });
+                _logger.LogError(ex, "Failed to request media for ExternalId={ExternalId}", request.ExternalId);
+                return Ok(new { success = false, message = ex.Message });
             }
         }
 
-        [HttpPost("RequestEpisode")]
+        [HttpPost("Request/Episode")]
         public async Task<IActionResult> RequestEpisode([FromBody] EpisodeRequestBody request)
         {
             try
             {
-                var config = Plugin.Instance.Configuration;
+                var config = Plugin.Instance!.Configuration;
 
                 if (string.IsNullOrWhiteSpace(config.SonarrUrl) || string.IsNullOrWhiteSpace(config.SonarrApiKey))
-                    return StatusCode(503, new { success = false, message = "Sonarr is not configured." });
+                    return Ok(new { success = false, message = "Sonarr is not configured on server." });
 
-                await _sonarrService.RequestEpisode(config.SonarrUrl, config.SonarrApiKey, request.TvdbId, request.SeasonNumber, request.EpisodeNumber);
-                return Ok(new { success = true });
+                if (!int.TryParse(request.SeriesId, out var seriesIdInt))
+                    return BadRequest(new { success = false, message = $"Invalid series ID format: '{request.SeriesId}'." });
+
+                await _sonarrService.RequestEpisode(config.SonarrUrl, config.SonarrApiKey, seriesIdInt, request.SeasonNumber, request.EpisodeNumber);
+                return Ok(new { success = true, message = "Episode search triggered successfully" });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to request episode S{Season}E{Episode} for TvdbId={TvdbId}",
-                    request.SeasonNumber, request.EpisodeNumber, request.TvdbId);
-                return StatusCode(500, new { success = false, message = ex.Message });
+                _logger.LogError(ex, "Failed to request episode S{Season}E{Episode} for SeriesId={SeriesId}",
+                    request.SeasonNumber, request.EpisodeNumber, request.SeriesId);
+                return Ok(new { success = false, message = ex.Message });
             }
-        }
-
-        private void UpdateProxyConfig(TestRequest request)
-        {
-            // Temporarily update the plugin instance config for the duration of the request/service call
-            // Since BaseApiService reads from Plugin.Instance.Configuration
-            // Note: This is a bit hacky but works for the test connection flow
-            Plugin.Instance.Configuration.ProxyUsername = request.ProxyUsername;
-            Plugin.Instance.Configuration.ProxyPassword = request.ProxyPassword;
         }
 
         public class TestRequest
@@ -180,14 +183,14 @@ namespace Cinefin.ServerPlugin.Controllers
 
         public class MediaRequestBody
         {
-            public string TmdbId { get; set; } = string.Empty;
+            public string ExternalId { get; set; } = string.Empty;
             public string MediaType { get; set; } = string.Empty;
             public List<int>? Seasons { get; set; }
         }
 
         public class EpisodeRequestBody
         {
-            public int TvdbId { get; set; }
+            public string SeriesId { get; set; } = string.Empty;
             public int SeasonNumber { get; set; }
             public int EpisodeNumber { get; set; }
         }
