@@ -57,8 +57,11 @@ namespace Cinefin.ServerPlugin.Controllers
         [HttpPost("TestSonarr")]
         public async Task<IActionResult> TestSonarr([FromBody] TestRequest request)
         {
+            var config = Plugin.Instance!.Configuration;
+            var oldIgnoreSsl = config.IgnoreSslErrors;
             try
             {
+                config.IgnoreSslErrors = request.IgnoreSsl;
                 await _sonarrService.ValidateConnection(request.Url, request.ApiKey, request.ProxyUsername, request.ProxyPassword);
                 return Ok(new { success = true, message = "Connection successful" });
             }
@@ -67,13 +70,20 @@ namespace Cinefin.ServerPlugin.Controllers
                 _logger.LogWarning(ex, "Sonarr connection test failed for {Url}", request.Url);
                 return Ok(new { success = false, message = ex.Message });
             }
+            finally
+            {
+                config.IgnoreSslErrors = oldIgnoreSsl;
+            }
         }
 
         [HttpPost("TestRadarr")]
         public async Task<IActionResult> TestRadarr([FromBody] TestRequest request)
         {
+            var config = Plugin.Instance!.Configuration;
+            var oldIgnoreSsl = config.IgnoreSslErrors;
             try
             {
+                config.IgnoreSslErrors = request.IgnoreSsl;
                 await _radarrService.ValidateConnection(request.Url, request.ApiKey, request.ProxyUsername, request.ProxyPassword);
                 return Ok(new { success = true, message = "Connection successful" });
             }
@@ -82,13 +92,20 @@ namespace Cinefin.ServerPlugin.Controllers
                 _logger.LogWarning(ex, "Radarr connection test failed for {Url}", request.Url);
                 return Ok(new { success = false, message = ex.Message });
             }
+            finally
+            {
+                config.IgnoreSslErrors = oldIgnoreSsl;
+            }
         }
 
         [HttpPost("TestOverseerr")]
         public async Task<IActionResult> TestOverseerr([FromBody] TestRequest request)
         {
+            var config = Plugin.Instance!.Configuration;
+            var oldIgnoreSsl = config.IgnoreSslErrors;
             try
             {
+                config.IgnoreSslErrors = request.IgnoreSsl;
                 await _overseerrService.ValidateConnection(request.Url, request.ApiKey, request.ProxyUsername, request.ProxyPassword);
                 return Ok(new { success = true, message = "Connection successful" });
             }
@@ -96,6 +113,10 @@ namespace Cinefin.ServerPlugin.Controllers
             {
                 _logger.LogWarning(ex, "Overseerr connection test failed for {Url}", request.Url);
                 return Ok(new { success = false, message = ex.Message });
+            }
+            finally
+            {
+                config.IgnoreSslErrors = oldIgnoreSsl;
             }
         }
 
@@ -179,6 +200,7 @@ namespace Cinefin.ServerPlugin.Controllers
             public string ApiKey { get; set; } = string.Empty;
             public string ProxyUsername { get; set; } = string.Empty;
             public string ProxyPassword { get; set; } = string.Empty;
+            public bool IgnoreSsl { get; set; }
         }
 
         public class MediaRequestBody

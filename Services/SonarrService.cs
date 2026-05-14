@@ -145,7 +145,18 @@ namespace Cinefin.ServerPlugin.Services
             if (string.IsNullOrWhiteSpace(apiKey)) throw new ArgumentException("API Key is required");
 
             var baseUrl = url.TrimEnd('/');
-            await GetAsync<object>($"{baseUrl}/api/v3/system/status", apiKey, proxyUser, proxyPass);
+            
+            try
+            {
+                // Try standard v3 path first
+                await GetAsync<object>($"{baseUrl}/api/v3/system/status", apiKey, proxyUser, proxyPass);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogInformation("Sonarr v3 status check failed, trying legacy v2 path. Error: {Message}", ex.Message);
+                // Fallback to legacy v2 path
+                await GetAsync<object>($"{baseUrl}/api/system/status", apiKey, proxyUser, proxyPass);
+            }
         }
 
         public async Task AddSeries(string url, string apiKey, int tvdbId, List<int>? requestedSeasons)

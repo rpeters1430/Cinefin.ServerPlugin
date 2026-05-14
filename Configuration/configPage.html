@@ -131,11 +131,13 @@
 
         function testConnection(endpoint, url, apiKey) {
             Dashboard.showLoadingMsg();
+            var page = $('#CinefinConfigPage')[0];
             var body = {
                 Url: url,
                 ApiKey: apiKey,
                 ProxyUsername: $('#ProxyUsername').val(),
-                ProxyPassword: $('#ProxyPassword').val()
+                ProxyPassword: $('#ProxyPassword').val(),
+                IgnoreSsl: $('#IgnoreSslErrors', page).is(':checked')
             };
 
             ApiClient.ajax({
