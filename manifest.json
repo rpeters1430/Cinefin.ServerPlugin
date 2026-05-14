@@ -12,7 +12,7 @@
         "changelog": "Resolved nullability warnings in API controllers and improved internal stability.",
         "targetAbi": "10.11.0.0",
         "sourceUrl": "https://github.com/rpeters1430/Cinefin.ServerPlugin/releases/download/v1.0.0.5/Cinefin.ServerPlugin.v1.0.0.5.zip",
-        "checksum": "4eec5d3774a910693a2cee125d2693fc",
+        "checksum": "558651111b2224d3608ee83d78b06468",
         "timestamp": "2026-05-13 16:00:00"
       },
       {
