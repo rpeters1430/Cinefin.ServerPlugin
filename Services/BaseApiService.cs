@@ -26,9 +26,12 @@ namespace Cinefin.ServerPlugin.Services
         // so we never need to mutate global plugin state.
         private void AddHeaders(HttpRequestMessage request, string apiKey, string? proxyUser = null, string? proxyPass = null)
         {
+            // Standard *arr header
             request.Headers.Add("X-Api-Key", apiKey);
             request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-            request.Headers.UserAgent.ParseAdd("Cinefin-Jellyfin-Plugin/1.0");
+            
+            // Standard browser-like user agent to avoid proxy blocks
+            request.Headers.UserAgent.ParseAdd("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36");
 
             var config = Plugin.Instance?.Configuration;
             var username = proxyUser ?? config?.ProxyUsername;
@@ -53,11 +56,18 @@ namespace Cinefin.ServerPlugin.Services
             return normalized;
         }
 
+        private string AppendApiKey(string url, string apiKey)
+        {
+            var separator = url.Contains('?') ? "&" : "?";
+            return $"{url}{separator}apikey={apiKey}";
+        }
+
         protected async Task<T?> GetAsync<T>(string url, string apiKey, string? proxyUser = null, string? proxyPass = null)
         {
+            var finalUrl = AppendApiKey(url, apiKey);
             try
             {
-                var request = new HttpRequestMessage(HttpMethod.Get, url);
+                var request = new HttpRequestMessage(HttpMethod.Get, finalUrl);
                 AddHeaders(request, apiKey, proxyUser, proxyPass);
 
                 var response = await HttpClient.SendAsync(request);
@@ -67,7 +77,7 @@ namespace Cinefin.ServerPlugin.Services
                     var errorContent = await response.Content.ReadAsStringAsync();
                     Logger.LogError("GET failed. Status: {StatusCode}, URL: {Url}, Body: {Content}",
                         response.StatusCode, url, errorContent);
-                    throw new HttpRequestException($"Request to {url} failed ({response.StatusCode}): {errorContent}");
+                    throw new HttpRequestException($"Request failed with status {response.StatusCode}. Details: {errorContent}");
                 }
 
                 return await response.Content.ReadFromJsonAsync<T>();
@@ -77,15 +87,16 @@ namespace Cinefin.ServerPlugin.Services
                 Logger.LogError(ex, "GET failed due to exception. URL: {Url}", url);
                 var message = ex.Message;
                 if (ex.InnerException != null) message += " -> " + ex.InnerException.Message;
-                throw new HttpRequestException($"Connection to {url} failed: {message}", ex);
+                throw new HttpRequestException($"Connection failed: {message}", ex);
             }
         }
 
         protected async Task PostAsync<T>(string url, string apiKey, T data, string? proxyUser = null, string? proxyPass = null)
         {
+            var finalUrl = AppendApiKey(url, apiKey);
             try
             {
-                var request = new HttpRequestMessage(HttpMethod.Post, url);
+                var request = new HttpRequestMessage(HttpMethod.Post, finalUrl);
                 AddHeaders(request, apiKey, proxyUser, proxyPass);
                 request.Content = JsonContent.Create(data);
 
@@ -96,7 +107,7 @@ namespace Cinefin.ServerPlugin.Services
                     var errorContent = await response.Content.ReadAsStringAsync();
                     Logger.LogError("POST failed. Status: {StatusCode}, URL: {Url}, Body: {Content}",
                         response.StatusCode, url, errorContent);
-                    throw new HttpRequestException($"Request to {url} failed ({response.StatusCode}): {errorContent}");
+                    throw new HttpRequestException($"Request failed with status {response.StatusCode}. Details: {errorContent}");
                 }
             }
             catch (Exception ex) when (ex is not HttpRequestException)
@@ -104,7 +115,7 @@ namespace Cinefin.ServerPlugin.Services
                 Logger.LogError(ex, "POST failed due to exception. URL: {Url}", url);
                 var message = ex.Message;
                 if (ex.InnerException != null) message += " -> " + ex.InnerException.Message;
-                throw new HttpRequestException($"Connection to {url} failed: {message}", ex);
+                throw new HttpRequestException($"Connection failed: {message}", ex);
             }
         }
     }
