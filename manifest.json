@@ -8,6 +8,14 @@
     "overview": "Integrates Sonarr, Radarr, and Overseerr into Jellyfin for the Cinefin app.",
     "versions": [
       {
+        "version": "1.0.1.2",
+        "changelog": "Changelog for v1.0.1.2: minor version bump and update testing.",
+        "targetAbi": "10.11.0.0",
+        "sourceUrl": "https://github.com/rpeters1430/Cinefin.ServerPlugin/releases/download/v1.0.1.2/Cinefin.ServerPlugin.v1.0.1.2.zip",
+        "checksum": "28140c70ff911fb5723a92b1e891d884",
+        "timestamp": "2026-06-14 18:35:00"
+      },
+      {
         "version": "1.0.1.1",
         "changelog": "Added authenticated credential sync endpoint so Cinefin clients can import saved Sonarr, Radarr, and Overseerr URLs and API keys from Jellyfin.",
         "targetAbi": "10.11.0.0",
