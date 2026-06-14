@@ -57,6 +57,38 @@ namespace Cinefin.ServerPlugin.Controllers
         }
 
         /// <summary>
+        /// Returns the plugin-stored app credentials so Cinefin clients can import
+        /// Sonarr, Radarr, and Overseerr settings from Jellyfin instead of requiring
+        /// per-device manual entry.
+        /// </summary>
+        [HttpGet("Credentials")]
+        public IActionResult GetCredentials()
+        {
+            var config = Plugin.Instance!.Configuration;
+
+            object ServiceCredentials(string url, string apiKey) => new
+            {
+                url,
+                apiKey,
+                isConfigured = !string.IsNullOrWhiteSpace(url) && !string.IsNullOrWhiteSpace(apiKey)
+            };
+
+            return Ok(new
+            {
+                sonarr = ServiceCredentials(config.SonarrUrl, config.SonarrApiKey),
+                radarr = ServiceCredentials(config.RadarrUrl, config.RadarrApiKey),
+                overseerr = ServiceCredentials(config.OverseerrUrl, config.OverseerrApiKey),
+                proxy = new
+                {
+                    username = config.ProxyUsername,
+                    password = config.ProxyPassword,
+                    isConfigured = !string.IsNullOrWhiteSpace(config.ProxyUsername) || !string.IsNullOrWhiteSpace(config.ProxyPassword)
+                },
+                ignoreSslErrors = config.IgnoreSslErrors
+            });
+        }
+
+        /// <summary>
         /// Tests TCP reachability and HTTP connectivity for all configured services.
         /// Returns actionable diagnostics to help identify Docker networking / SSL issues.
         /// </summary>
