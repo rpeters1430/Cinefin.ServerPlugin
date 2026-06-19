@@ -25,6 +25,9 @@ namespace Cinefin.ServerPlugin.Configuration
         // Set true if your reverse proxy uses a self-signed or internal CA certificate
         public bool IgnoreSslErrors { get; set; } = false;
 
+        // Allow non-admin users to import Sonarr/Radarr/Overseerr credentials
+        public bool AllowNonAdminCredentialsImport { get; set; } = false;
+
         // Returns the URL the plugin should actually use for API calls.
         // Internal URL takes priority over the external URL when set.
         public string EffectiveSonarrUrl => !string.IsNullOrWhiteSpace(SonarrInternalUrl) ? SonarrInternalUrl : SonarrUrl;

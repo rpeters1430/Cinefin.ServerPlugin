@@ -104,6 +104,13 @@
                         <span>Ignore SSL certificate errors (self-signed / internal CA)</span>
                     </label>
                 </div>
+                <div class="checkboxContainer">
+                    <label>
+                        <input id="AllowNonAdminCredentialsImport" name="AllowNonAdminCredentialsImport" type="checkbox" is="emby-checkbox" />
+                        <span>Allow non-admin users to import credentials in the app</span>
+                    </label>
+                    <div class="fieldDescription">If disabled, only Jellyfin administrators can import these settings to their mobile devices.</div>
+                </div>
 
                 <div class="buttonContainer" style="margin-top:24px;display:flex;gap:12px;flex-wrap:wrap">
                     <button is="emby-button" type="submit" class="raised button-confirm">
@@ -138,6 +145,7 @@
                 $('#ProxyUsername').val(config.ProxyUsername || '');
                 $('#ProxyPassword').val(config.ProxyPassword || '');
                 $('#IgnoreSslErrors').prop('checked', config.IgnoreSslErrors || false);
+                $('#AllowNonAdminCredentialsImport').prop('checked', config.AllowNonAdminCredentialsImport || false);
                 Dashboard.hideLoadingMsg();
             });
         });
@@ -157,6 +165,7 @@
                 config.ProxyUsername = $('#ProxyUsername').val();
                 config.ProxyPassword = $('#ProxyPassword').val();
                 config.IgnoreSslErrors = $('#IgnoreSslErrors').is(':checked');
+                config.AllowNonAdminCredentialsImport = $('#AllowNonAdminCredentialsImport').is(':checked');
                 ApiClient.updatePluginConfiguration(CinefinConfig.uniquePluginId, config).then(function (result) {
                     Dashboard.processPluginConfigurationUpdateResult(result);
                 });

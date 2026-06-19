@@ -8,6 +8,9 @@ using Microsoft.AspNetCore.Mvc;
 using Cinefin.ServerPlugin.Configuration;
 using Cinefin.ServerPlugin.Services;
 using Microsoft.Extensions.Logging;
+using MediaBrowser.Controller.Library;
+using Jellyfin.Data;
+using Jellyfin.Database.Implementations.Enums;
 
 namespace Cinefin.ServerPlugin.Controllers
 {
@@ -19,18 +22,32 @@ namespace Cinefin.ServerPlugin.Controllers
         private readonly SonarrService _sonarrService;
         private readonly RadarrService _radarrService;
         private readonly OverseerrService _overseerrService;
+        private readonly IUserManager _userManager;
         private readonly ILogger<CinefinController> _logger;
 
         public CinefinController(
             SonarrService sonarrService,
             RadarrService radarrService,
             OverseerrService overseerrService,
+            IUserManager userManager,
             ILogger<CinefinController> logger)
         {
             _sonarrService = sonarrService;
             _radarrService = radarrService;
             _overseerrService = overseerrService;
+            _userManager = userManager;
             _logger = logger;
+        }
+
+        private bool IsCurrentUserAdmin()
+        {
+            var userIdClaim = HttpContext.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (Guid.TryParse(userIdClaim, out var userId))
+            {
+                var user = _userManager.GetUserById(userId);
+                return user != null && user.HasPermission(PermissionKind.IsAdministrator);
+            }
+            return false;
         }
 
         [HttpGet("Info")]
@@ -47,13 +64,35 @@ namespace Cinefin.ServerPlugin.Controllers
             if (sonarrEnabled) capabilities.Add("sonarr");
             if (radarrEnabled) capabilities.Add("radarr");
             if (overseerrEnabled) capabilities.Add("overseerr");
+            capabilities.Add("configuration");
 
             return Ok(new
             {
                 version = plugin.Version.ToString(),
                 capabilities = capabilities,
-                isConfigured = sonarrEnabled || radarrEnabled || overseerrEnabled
+                isConfigured = sonarrEnabled || radarrEnabled || overseerrEnabled,
+                allowNonAdminImports = config.AllowNonAdminCredentialsImport
             });
+        }
+
+        [HttpPost("Configuration")]
+        public IActionResult UpdateConfiguration([FromBody] ConfigurationRequestBody request)
+        {
+            if (!IsCurrentUserAdmin())
+            {
+                return Forbid();
+            }
+
+            var plugin = Plugin.Instance!;
+            plugin.Configuration.AllowNonAdminCredentialsImport = request.AllowNonAdminImports;
+            plugin.SaveConfiguration();
+
+            return Ok(new { success = true, message = "Configuration updated successfully" });
+        }
+
+        public class ConfigurationRequestBody
+        {
+            public bool AllowNonAdminImports { get; set; }
         }
 
         /// <summary>
@@ -65,6 +104,12 @@ namespace Cinefin.ServerPlugin.Controllers
         public IActionResult GetCredentials()
         {
             var config = Plugin.Instance!.Configuration;
+
+            if (!config.AllowNonAdminCredentialsImport && !IsCurrentUserAdmin())
+            {
+                _logger.LogWarning("Access to credentials API forbidden for non-admin user.");
+                return Forbid();
+            }
 
             object ServiceCredentials(string url, string apiKey) => new
             {
@@ -95,6 +140,10 @@ namespace Cinefin.ServerPlugin.Controllers
         [HttpGet("Diagnostics")]
         public async Task<IActionResult> GetDiagnostics()
         {
+            if (!IsCurrentUserAdmin())
+            {
+                return Forbid();
+            }
             var config = Plugin.Instance!.Configuration;
             var results = new List<object>();
 
@@ -172,6 +221,10 @@ namespace Cinefin.ServerPlugin.Controllers
         [HttpPost("TestSonarr")]
         public async Task<IActionResult> TestSonarr([FromBody] TestRequest request)
         {
+            if (!IsCurrentUserAdmin())
+            {
+                return Forbid();
+            }
             var config = Plugin.Instance!.Configuration;
             var oldIgnoreSsl = config.IgnoreSslErrors;
             try
@@ -194,6 +247,10 @@ namespace Cinefin.ServerPlugin.Controllers
         [HttpPost("TestRadarr")]
         public async Task<IActionResult> TestRadarr([FromBody] TestRequest request)
         {
+            if (!IsCurrentUserAdmin())
+            {
+                return Forbid();
+            }
             var config = Plugin.Instance!.Configuration;
             var oldIgnoreSsl = config.IgnoreSslErrors;
             try
@@ -216,6 +273,10 @@ namespace Cinefin.ServerPlugin.Controllers
         [HttpPost("TestOverseerr")]
         public async Task<IActionResult> TestOverseerr([FromBody] TestRequest request)
         {
+            if (!IsCurrentUserAdmin())
+            {
+                return Forbid();
+            }
             var config = Plugin.Instance!.Configuration;
             var oldIgnoreSsl = config.IgnoreSslErrors;
             try

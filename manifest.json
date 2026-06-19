@@ -8,6 +8,14 @@
     "overview": "Integrates Sonarr, Radarr, and Overseerr into Jellyfin for the Cinefin app.",
     "versions": [
       {
+        "version": "1.0.1.3",
+        "changelog": "Added remote configuration support for administrators to toggle non-admin credential import permissions directly from the app. Updated GET /Cinefin/Info to return allowNonAdminImports and the configuration capability.",
+        "targetAbi": "10.11.0.0",
+        "sourceUrl": "https://github.com/rpeters1430/Cinefin.ServerPlugin/releases/download/v1.0.1.3/Cinefin.ServerPlugin.v1.0.1.3.zip",
+        "checksum": "b1cfcf99fe7ef398b766112adb6d2d7e",
+        "timestamp": "2026-06-18 17:41:34"
+      },
+      {
         "version": "1.0.1.2",
         "changelog": "Changelog for v1.0.1.2: minor version bump and update testing.",
         "targetAbi": "10.11.0.0",
